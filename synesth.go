@@ -75,11 +75,11 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "1.4",
 				}},
-			{Sel: ".Hid2ToHid", Desc: "Letter Hidden to Color Hidden", //ADDED: WtScale from hid2 to hid
+			{Sel: ".Hid2ToHid", Desc: "Letter Hidden to Music Hidden", //ADDED: WtScale from hid2 to hid
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".AssocToOut", Desc: "Associator to Color Output", //ADDED: WtScale from associator to out
+			{Sel: ".AssocToOut", Desc: "Associator to Music Output", //ADDED: WtScale from associator to out
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
@@ -159,9 +159,9 @@ var ParamSets = params.Sets{
 // as arguments to methods, and provides the core GUI interface (note the view tags
 // for the fields which provide hints to how things should be displayed).
 type Sim struct {
-	Hid2ToHid   float32         `def:"0" desc:"Between Letter Hidden and Color Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	Hid2ToHid   float32         `def:"0" desc:"Between Letter Hidden and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
 	AssocToOut  float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` //ADDED
-	Out2ToAssoc float32         `def:"0" desc:"Between Color Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
+	Out2ToAssoc float32         `def:"0" desc:"Between Music Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
 	Net         *leabra.Network `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
 	//Pats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
 	TrainPats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"` //ADDED
@@ -281,7 +281,7 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Letter Input", "Color Input", "Letter Hidden", "Letter Output", "Color Hidden", "Color Output", "Associator Layer"}
+	ss.LayStatNms = []string{"Letter Input", "Music Input", "Letter Hidden", "Letter Output", "Music Hidden", "Music Output", "Associator Layer"}
 	ss.HiddenReps.Init()
 	ss.Defaults() //ADDED
 
@@ -393,11 +393,11 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//
 	// Please insert the additional code directly below inp.
 	inp := net.AddLayer2D("Letter Input", 7, 5, emer.Input) // changed to grid
-	inp2 := net.AddLayer2D("Color Input", 7, 5, emer.Input) //ADDED + changed to grid
+	inp2 := net.AddLayer2D("Music Input", 1, 5, emer.Input) //ADDED + changed to grid
 	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
 	out := net.AddLayer2D("Letter Output", 5, 2, emer.Target)
-	hid2 := net.AddLayer2D("Color Hidden", 6, 5, emer.Hidden)
-	out2 := net.AddLayer2D("Color Output", 5, 2, emer.Target)
+	hid2 := net.AddLayer2D("Music Hidden", 6, 5, emer.Hidden)
+	out2 := net.AddLayer2D("Music Output", 1, 5, emer.Target)
 	assoc := net.AddLayer2D("Associator Layer", 4, 4, emer.Hidden) //ADDED
 	//
 	// ****************************************************************************
@@ -437,7 +437,7 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
 	net.ConnectLayers(hid2, hid, prjn.NewFull(), emer.Forward)
-	net.ConnectLayers(assoc, out, prjn.NewFull(), emer.Forward)  //Color Output to Converging "Associator Layer"
+	net.ConnectLayers(assoc, out, prjn.NewFull(), emer.Forward)  //Music Output to Converging "Associator Layer"
 	net.ConnectLayers(out2, assoc, prjn.NewFull(), emer.Forward) //Letter Output to Converging "Associator Layer"
 
 	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
@@ -546,7 +546,7 @@ func (ss *Sim) AlphaCyc(train bool) {
 	}
 
 	outLetter := ss.Net.LayerByName("Letter Output").(leabra.LeabraLayer).AsLeabra()	// AJ 
-	outColor := ss.Net.LayerByName("Color Output").(leabra.LeabraLayer).AsLeabra()		// AJ 
+	outMusic := ss.Net.LayerByName("Music Output").(leabra.LeabraLayer).AsLeabra()		// AJ 
 
 	ss.Net.AlphaCycInit()
 	ss.Time.AlphaCycStart()
@@ -570,7 +570,7 @@ func (ss *Sim) AlphaCyc(train bool) {
 			}
 
 			outact := outLetter.Pools[0].Inhib.Act.Max 									// AJ from here
-			outact2 := outColor.Pools[0].Inhib.Act.Max 									
+			outact2 := outMusic.Pools[0].Inhib.Act.Max 									
 			if (outact > 0.75) && (outact2 > 0.75) && !train { 							
 				overThresh = true 
 				break
@@ -615,7 +615,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Letter Input", "Color Input", "Letter Output", "Color Output"} //ADDED NEw LAYERS
+	lays := []string{"Letter Input", "Music Input", "Letter Output", "Music Output"} //ADDED NEw LAYERS
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(*leabra.Layer)
 		pats := en.State(ly.Nm)
@@ -718,15 +718,15 @@ func (ss *Sim) InitStats() {
 
 func (ss *Sim) TrialStats(accum bool) (sse, avgsse, cosdiff float64) {
 	out1 := ss.Net.LayerByName("Letter Output").(*leabra.Layer) //ADDED
-	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer)  //ADDED
+	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer)  //ADDED
 	TrlCosDiff_letter := float64(out1.CosDiff.Cos)
-	TrlCosDiff_color := float64(out2.CosDiff.Cos)
-	ss.TrlCosDiff = (TrlCosDiff_color + TrlCosDiff_letter) / 2
+	TrlCosDiff_music := float64(out2.CosDiff.Cos)
+	ss.TrlCosDiff = (TrlCosDiff_music + TrlCosDiff_letter) / 2
 
 	TrlSSE_letter, TrlAvgSSE_letter := out1.MSE(0.5) // 0.5 = per-unit tolerance -- right side of .5
-	TrlSSE_color, TrlAvgSSE_color := out2.MSE(0.5)
-	ss.TrlSSE = (TrlSSE_color + TrlSSE_letter) / 2
-	ss.TrlAvgSSE = (TrlAvgSSE_color + TrlAvgSSE_letter) / 2
+	TrlSSE_music, TrlAvgSSE_music := out2.MSE(0.5)
+	ss.TrlSSE = (TrlSSE_music + TrlSSE_letter) / 2
+	ss.TrlAvgSSE = (TrlAvgSSE_music + TrlAvgSSE_letter) / 2
 
 	if accum {
 		ss.SumSSE += ss.TrlSSE
@@ -900,11 +900,11 @@ func (ss *Sim) SetParams(sheet string, setMsg bool) error {
 	}
 	//setting weight scale parameters for hidden layers
 	letterHid :=  ss.Net.LayerByName("Letter Hidden").(leabra.LeabraLayer).AsLeabra()
-	hidTohid := letterHid.RcvPrjns.SendName("Color Hidden").(leabra.LeabraPrjn).AsLeabra()
+	hidTohid := letterHid.RcvPrjns.SendName("Music Hidden").(leabra.LeabraPrjn).AsLeabra()
 	hidTohid.WtScale.Rel = ss.Hid2ToHid
 	//setting weight scale parameters from output 2 to Assoc 
 	Assoc :=  ss.Net.LayerByName("Associator Layer").(leabra.LeabraLayer).AsLeabra()
-	Out2ToAssoc := Assoc.RcvPrjns.SendName("Color Output").(leabra.LeabraPrjn).AsLeabra()
+	Out2ToAssoc := Assoc.RcvPrjns.SendName("Music Output").(leabra.LeabraPrjn).AsLeabra()
 	Out2ToAssoc.WtScale.Rel = ss.Out2ToAssoc 
 	//setting weight scale parameters from Assoc to Output 1
 	Out :=  ss.Net.LayerByName("Letter Output").(leabra.LeabraLayer).AsLeabra()
@@ -985,7 +985,8 @@ func (ss *Sim) OpenPats() {
 	dt := ss.TrainPats
 	dt.SetMetaData("name", "TrainPats")
 	dt.SetMetaData("desc", "Training patterns")
-	err := dt.OpenCSV("syn_training.dat", etable.Tab)
+	//err := dt.OpenCSV("syn_training.dat", etable.Tab)
+	err := dt.OpenCSV("syn_training_music_with_9.dat", etable.Tab)
 	if err != nil {
 		log.Println(err)
 	}
@@ -995,7 +996,8 @@ func (ss *Sim) OpenPats2() {
 	dt := ss.TestPats
 	dt.SetMetaData("name", "TestPats")
 	dt.SetMetaData("desc", "Testing patterns")
-	err := dt.OpenCSV("syn_test.dat", etable.Tab) //change eventually
+	//err := dt.OpenCSV("syn_test.dat", etable.Tab) //change eventually
+	err := dt.OpenCSV("syn_test_music_with_9.dat", etable.Tab) //change eventually
 	if err != nil {
 		log.Println(err)
 	}
@@ -1175,11 +1177,11 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 	// 	// so you can just uncomment the second line below:
 	// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
-	inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) // ADDED
+	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) // ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
-	hid2 := ss.Net.LayerByName("Color Hidden").(*leabra.Layer) //ADDED
+	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) //ADDED
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
-	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer)
+	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer)
 	// 	//
 	// 	// ****************************************************************************
 
@@ -1235,11 +1237,11 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	// 	// rather than setting up the data table. Create a 'hid' copy below.
 	// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
-	inp2 := ss.Net.LayerByName("Color Input").(*leabra.Layer) //ADDED
+	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) //ADDED
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
-	hid2 := ss.Net.LayerByName("Color Hidden").(*leabra.Layer) //ADDED
-	out2 := ss.Net.LayerByName("Color Output").(*leabra.Layer) //ADDED
+	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) //ADDED
+	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer) //ADDED
 	// 	//
 	// 	// ****************************************************************************
 
