@@ -87,6 +87,23 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
+			// ADDED EVERYTHING BELOW!
+			{Sel: ".ContextToHid", Desc: "Hidden Context to Letter Hidden", //ADDED
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".ContextToHid2", Desc: "Hidden Context to Music Hidden", //ADDED
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".HidToContext", Desc: "Letter Hidden to Hidden Context", //ADDED
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".Hid2ToContext", Desc: "Letter Hidden to Hidden Context", //ADDED
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
 		},
 		"Sim": &params.Sheet{ // sim params apply to sim object
 			{Sel: "Sim", Desc: "best params always finish in this time",
@@ -162,6 +179,13 @@ type Sim struct {
 	Hid2ToHid   float32         `def:"0" desc:"Between Letter Hidden and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
 	AssocToOut  float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` //ADDED
 	Out2ToAssoc float32         `def:"0" desc:"Between Music Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
+	
+	// ADDED the four floats below
+	ContextToHid  float32         `def:"0" desc:"Between Hidden Context and Letter Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	ContextToHid2 float32         `def:"0" desc:"Between Hidden Context and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	HidToContext  float32         `def:"0" desc:"Between Letter Hidden and Hidden Context WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	Hid2ToContext float32         `def:"0" desc:"Between Music Hidden and Hidden Context WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+
 	Net         *leabra.Network `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
 	//Pats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
 	TrainPats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"` //ADDED
@@ -281,17 +305,21 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Letter Input", "Music Input", "Letter Hidden", "Letter Output", "Music Hidden", "Music Output", "Associator Layer"}
+	ss.LayStatNms = []string{"Letter Input", "Music Input", "Letter Hidden", "Letter Output", "Hidden Context", "Music Hidden", "Music Output", "Associator Layer"} // ADDED Hidden context
 	ss.HiddenReps.Init()
 	ss.Defaults() //ADDED
 
 }
 
-// Defaults sets default params (ADDED)
+// Defaults sets default params // ADDED
 func (ss *Sim) Defaults() {
 	ss.Hid2ToHid = 0
 	ss.Out2ToAssoc = 0
 	ss.AssocToOut = 0
+	ss.ContextToHid = 0
+	ss.ContextToHid2 = 0
+	ss.HidToContext = 0
+	ss.Hid2ToContext = 0
 }
 
 // ****************************************************************************
@@ -395,6 +423,7 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	inp := net.AddLayer2D("Letter Input", 7, 5, emer.Input) // changed to grid
 	inp2 := net.AddLayer2D("Music Input", 1, 5, emer.Input) //ADDED + changed to grid
 	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
+	hidcon := net.AddLayer2D("Hidden Context", 6, 5, emer.Hidden) //ADDED hidden context
 	out := net.AddLayer2D("Letter Output", 5, 2, emer.Target)
 	hid2 := net.AddLayer2D("Music Hidden", 6, 5, emer.Hidden)
 	out2 := net.AddLayer2D("Music Output", 1, 5, emer.Target)
@@ -436,17 +465,24 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.ConnectLayers(inp2, hid2, prjn.NewFull(), emer.Forward)
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
+
+	net.BidirConnectLayers(hidcon, hid, prjn.NewFull()) // ADDED
+	net.BidirConnectLayers(hidcon, hid2, prjn.NewFull()) // ADDED
+
 	net.ConnectLayers(hid2, hid, prjn.NewFull(), emer.Forward)
 	net.ConnectLayers(assoc, out, prjn.NewFull(), emer.Forward)  //Music Output to Converging "Associator Layer"
 	net.ConnectLayers(out2, assoc, prjn.NewFull(), emer.Forward) //Letter Output to Converging "Associator Layer"
 
-	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
+	// ADDED - adjusted all positions below to incorporate additional layers, inputs, outputs, and context
+
+	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 9})
 	hid.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
-	hid2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 4})
+	hidcon.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2}) // ADDED
+	hid2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Input", YAlign: relpos.Front, Space: 2}) // ADDED - changed position
 	out.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
-	out2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 7})
-	assoc.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Output", YAlign: relpos.Front, Space: 1})
-	assoc.SetRelPos(relpos.Rel{Rel: relpos.Relations(relpos.Center), Other: "Letter Output", YAlign: relpos.Front, Space: 2})
+	out2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Hidden", YAlign: relpos.Front, Space: 2})
+	assoc.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 5})
+	assoc.SetRelPos(relpos.Rel{Rel: relpos.Relations(relpos.Center), Other: "Letter Output", YAlign: relpos.Front, Space: 5})
 
 	//
 	// Once you've done this. Please proceed to Section 1b (by searching this file.)
@@ -882,6 +918,20 @@ func (ss *Sim) ParamsName() string {
 	letAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("Out2ToAssoc")
 	letAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Out2ToAssoc))
 
+	// ADDED EVERYTHING BELOW!
+	conHid := ss.Params.SetByName("Base").SheetByName("Network").SelByName("ContextToHid")
+	conHid.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.ContextToHid))
+
+	conHidTwo := ss.Params.SetByName("Base").SheetByName("Network").SelByName("ContextToHid2")
+	conHidTwo.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.ContextToHid2))
+
+	hidCon := ss.Params.SetByName("Base").SheetByName("Network").SelByName("HidToContext")
+	hidCon.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.HidToContext))
+
+	hidTwoCon := ss.Params.SetByName("Base").SheetByName("Network").SelByName("Hid2ToContext")
+	hidTwoCon.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Hid2ToContext))
+
+
 	return ss.ParamSet
 }
 
@@ -910,6 +960,26 @@ func (ss *Sim) SetParams(sheet string, setMsg bool) error {
 	Out :=  ss.Net.LayerByName("Letter Output").(leabra.LeabraLayer).AsLeabra()
 	AssocToOut := Out.RcvPrjns.SendName("Associator Layer").(leabra.LeabraPrjn).AsLeabra()
 	AssocToOut.WtScale.Rel = ss.AssocToOut 
+
+
+	// ADDED everything below - new bidirectional connections with specific weights!
+	//setting weight scale parameters from Context to Hid
+	ConToHid := letterHid.RcvPrjns.SendName("Hidden Context").(leabra.LeabraPrjn).AsLeabra()
+	ConToHid.WtScale.Rel = ss.ContextToHid 
+
+	//setting weight scale parameters from Context to Hid2
+	musicHid :=  ss.Net.LayerByName("Music Hidden").(leabra.LeabraLayer).AsLeabra()
+	ContoHid2 := musicHid.RcvPrjns.SendName("Hidden Context").(leabra.LeabraPrjn).AsLeabra()
+	ContoHid2.WtScale.Rel = ss.ContextToHid2 
+
+	//setting weight scale parameters from Hid to Context
+	hiddenCon :=  ss.Net.LayerByName("Hidden Context").(leabra.LeabraLayer).AsLeabra()
+	hidtoCon := hiddenCon.RcvPrjns.SendName("Letter Hidden").(leabra.LeabraPrjn).AsLeabra()
+	hidtoCon.WtScale.Rel = ss.HidToContext 
+
+	//setting weight scale parameters from Hid2 to Context
+	hid2toCon := hiddenCon.RcvPrjns.SendName("Music Hidden").(leabra.LeabraPrjn).AsLeabra()
+	hid2toCon.WtScale.Rel = ss.Hid2ToContext 
 	
 	return err
 }
@@ -986,7 +1056,7 @@ func (ss *Sim) OpenPats() {
 	dt.SetMetaData("name", "TrainPats")
 	dt.SetMetaData("desc", "Training patterns")
 	//err := dt.OpenCSV("syn_training.dat", etable.Tab)
-	err := dt.OpenCSV("syn_training_music_with_9.dat", etable.Tab)
+	err := dt.OpenCSV("syn_training_music.dat", etable.Tab)
 	if err != nil {
 		log.Println(err)
 	}
@@ -997,7 +1067,7 @@ func (ss *Sim) OpenPats2() {
 	dt.SetMetaData("name", "TestPats")
 	dt.SetMetaData("desc", "Testing patterns")
 	//err := dt.OpenCSV("syn_test.dat", etable.Tab) //change eventually
-	err := dt.OpenCSV("syn_test_music_with_9.dat", etable.Tab) //change eventually
+	err := dt.OpenCSV("syn_test_music.dat", etable.Tab) //change eventually
 	if err != nil {
 		log.Println(err)
 	}
