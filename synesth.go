@@ -6,7 +6,6 @@
 package main
 
 import (
-	//ADDED for train/test configuration/environment
 	"flag"
 	"fmt"
 	"log"
@@ -15,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	//"strings" //ADDED for train/test configuration/environment
+	//"strings"
 
 	"github.com/emer/emergent/emer"
 	"github.com/emer/emergent/env"
@@ -75,15 +74,15 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "1.4",
 				}},
-			{Sel: ".Hid2ToHid", Desc: "Letter Hidden to Music Hidden", //ADDED: WtScale from hid2 to hid
+			{Sel: ".Hid2ToHid", Desc: "Letter Hidden to Music Hidden", 
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".AssocToOut", Desc: "Associator to Music Output", //ADDED: WtScale from associator to out
+			{Sel: ".AssocToOut", Desc: "Associator to Music Output", 
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".Out2ToAssoc", Desc: "Letter Output to Associator", //ADDED: WtScale from out2 to associator
+			{Sel: ".Out2ToAssoc", Desc: "Letter Output to Associator", 
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
@@ -176,9 +175,9 @@ var ParamSets = params.Sets{
 // as arguments to methods, and provides the core GUI interface (note the view tags
 // for the fields which provide hints to how things should be displayed).
 type Sim struct {
-	Hid2ToHid   float32         `def:"0" desc:"Between Letter Hidden and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
-	AssocToOut  float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` //ADDED
-	Out2ToAssoc float32         `def:"0" desc:"Between Music Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  //ADDED
+	Hid2ToHid   float32         `def:"0" desc:"Between Letter Hidden and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     
+	AssocToOut  float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` 
+	Out2ToAssoc float32         `def:"0" desc:"Between Music Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  
 	
 	// ADDED the four floats below
 	ContextToHid  float32         `def:"0" desc:"Between Hidden Context and Letter Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
@@ -188,8 +187,8 @@ type Sim struct {
 
 	Net         *leabra.Network `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
 	//Pats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
-	TrainPats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"` //ADDED
-	TestPats     *etable.Table     `view:"no-inline" desc:"the testing patterns to use"`  //ADDED
+	TrainPats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"` 
+	TestPats     *etable.Table     `view:"no-inline" desc:"the testing patterns to use"`  
 	TrnEpcLog    *etable.Table     `view:"no-inline" desc:"training epoch-level log data"`
 	TstEpcLog    *etable.Table     `view:"no-inline" desc:"testing epoch-level log data"`
 	TstTrlLog    *etable.Table     `view:"no-inline" desc:"testing trial-level log data"`
@@ -286,7 +285,7 @@ func (ss *Sim) New() {
 	//ss.FmHid = 1
 	//ss.FmPrv = 0
 	// -----------------------------------
-	ss.Defaults() //ADDED
+	ss.Defaults()
 	ss.Net = &leabra.Network{}
 	ss.TrainPats = &etable.Table{}
 	ss.TestPats = &etable.Table{}
@@ -307,11 +306,11 @@ func (ss *Sim) New() {
 	ss.TestInterval = 5
 	ss.LayStatNms = []string{"Letter Input", "Music Input", "Letter Hidden", "Letter Output", "Hidden Context", "Music Hidden", "Music Output", "Associator Layer"} // ADDED Hidden context
 	ss.HiddenReps.Init()
-	ss.Defaults() //ADDED
+	ss.Defaults()
 
 }
 
-// Defaults sets default params // ADDED
+// Defaults sets default params 
 func (ss *Sim) Defaults() {
 	ss.Hid2ToHid = 0
 	ss.Out2ToAssoc = 0
@@ -356,7 +355,7 @@ func (ss *Sim) Defaults() {
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
 	ss.OpenPats()
-	ss.OpenPats2() //added
+	ss.OpenPats2() 
 	ss.ConfigEnv()
 	ss.ConfigNet(ss.Net)
 	ss.ConfigTrnEpcLog(ss.TrnEpcLog)
@@ -421,13 +420,13 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	//
 	// Please insert the additional code directly below inp.
 	inp := net.AddLayer2D("Letter Input", 7, 5, emer.Input) // changed to grid
-	inp2 := net.AddLayer2D("Music Input", 1, 5, emer.Input) //ADDED + changed to grid
+	inp2 := net.AddLayer2D("Music Input", 1, 5, emer.Input) // changed to grid
 	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
 	hidcon := net.AddLayer2D("Hidden Context", 6, 5, emer.Hidden) //ADDED hidden context
 	out := net.AddLayer2D("Letter Output", 5, 2, emer.Target)
 	hid2 := net.AddLayer2D("Music Hidden", 6, 5, emer.Hidden)
 	out2 := net.AddLayer2D("Music Output", 1, 5, emer.Target)
-	assoc := net.AddLayer2D("Associator Layer", 4, 4, emer.Hidden) //ADDED
+	assoc := net.AddLayer2D("Associator Layer", 4, 4, emer.Hidden) 
 	//
 	// ****************************************************************************
 
@@ -478,7 +477,7 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 9})
 	hid.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
 	hidcon.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2}) // ADDED
-	hid2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Input", YAlign: relpos.Front, Space: 2}) // ADDED - changed position
+	hid2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Input", YAlign: relpos.Front, Space: 2}) // changed position
 	out.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
 	out2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Hidden", YAlign: relpos.Front, Space: 2})
 	assoc.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 5})
@@ -651,7 +650,7 @@ func (ss *Sim) ApplyInputs(en env.Env) {
 	ss.Net.InitExt() // clear any existing inputs -- not strictly necessary if always
 	// going to the same layers, but good practice and cheap anyway
 
-	lays := []string{"Letter Input", "Music Input", "Letter Output", "Music Output"} //ADDED NEw LAYERS
+	lays := []string{"Letter Input", "Music Input", "Letter Output", "Music Output"} 
 	for _, lnm := range lays {
 		ly := ss.Net.LayerByName(lnm).(*leabra.Layer)
 		pats := en.State(ly.Nm)
@@ -753,8 +752,8 @@ func (ss *Sim) InitStats() {
 // You can also aggregate directly from log data, as is done for testing stats
 
 func (ss *Sim) TrialStats(accum bool) (sse, avgsse, cosdiff float64) {
-	out1 := ss.Net.LayerByName("Letter Output").(*leabra.Layer) //ADDED
-	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer)  //ADDED
+	out1 := ss.Net.LayerByName("Letter Output").(*leabra.Layer) 
+	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer) 
 	TrlCosDiff_letter := float64(out1.CosDiff.Cos)
 	TrlCosDiff_music := float64(out2.CosDiff.Cos)
 	ss.TrlCosDiff = (TrlCosDiff_music + TrlCosDiff_letter) / 2
@@ -1247,9 +1246,9 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 	// 	// so you can just uncomment the second line below:
 	// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
-	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) // ADDED
+	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) 
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
-	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) //ADDED
+	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) 
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer)
 	// 	//
@@ -1307,11 +1306,11 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	// 	// rather than setting up the data table. Create a 'hid' copy below.
 	// 	//
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
-	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) //ADDED
+	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) 
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
-	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) //ADDED
-	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer) //ADDED
+	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) 
+	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer) 
 	// 	//
 	// 	// ****************************************************************************
 
@@ -1345,7 +1344,7 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 		ss.HiddenValsTsr = &etensor.Float32{}
 		ss.OutputValsTsr = &etensor.Float32{}
 		ss.HiddenValsTsr = &etensor.Float32{}
-		ss.Input2ValsTsr = &etensor.Float32{} //added layer data for new layers
+		ss.Input2ValsTsr = &etensor.Float32{} // layer data for new layers
 		ss.Hidden2ValsTsr = &etensor.Float32{}
 		ss.Output2ValsTsr = &etensor.Float32{}
 		ss.Hidden2ValsTsr = &etensor.Float32{}
@@ -1424,8 +1423,8 @@ func (ss *Sim) ConfigTstTrlPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 	plt.SetColParams("Epoch", false, true, 0, false, 0)
 	plt.SetColParams("SSE", false, true, 0, false, 0)
 	plt.SetColParams("AvgSSE", false, true, 0, false, 0)
-	plt.SetColParams("TrialName", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 0) //added from stroop
-	plt.SetColParams("Cycle", eplot.On, eplot.FixMin, 0, eplot.FixMax, 250) // added from stroop
+	plt.SetColParams("TrialName", eplot.On, eplot.FixMin, 0, eplot.FloatMax, 0) 
+	plt.SetColParams("Cycle", eplot.On, eplot.FixMin, 0, eplot.FixMax, 250) 
 	plt.SetColParams("PctErr", true, true, 0, true, 1)  // default plot
 	plt.SetColParams("PctCor", false, true, 0, true, 1) // default plot
 	plt.SetColParams("CosDiff", false, true, 0, true, 1)
