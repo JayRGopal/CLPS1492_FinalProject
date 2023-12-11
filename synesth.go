@@ -263,6 +263,7 @@ type Sim struct {
 	Input2ValsTsr  *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	Output2ValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	Hidden2ValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
+	MusicHiddenContextValsTsr *etensor.Float32 `view:"-" desc:"for holding layer values"`
 	SaveWts        bool             `view:"-" desc:"for command-line run only, auto-save final weights after each run"`
 	NoGui          bool             `view:"-" desc:"if true, runing in no GUI mode"`
 	LogSetParams   bool             `view:"-" desc:"if true, print message for all params that are set"`
@@ -336,6 +337,10 @@ func (ss *Sim) Defaults() {
 	ss.Hid2ToSharedHidden = 0
 	ss.MusicHiddenToMusicHiddenContext = 0
 	ss.MusicHiddenContextToMusicHidden = 0
+
+	// ADDED this too!
+	ss.FmHid = 0.4
+	ss.FmPrv = 0.6
 }
 
 // ****************************************************************************
@@ -585,9 +590,16 @@ func (ss *Sim) AlphaCyc(train bool) {
 	// ss.Win.PollEvents() // this can be used instead of running in a separate go routine
 
 	// **********************************
-	// ADDED
+	// ADDED - Special type of hidden context that does copying, modeled after the Midterm's SRN
 
-
+	context_in := ss.Net.LayerByName("Music Hidden").(*leabra.Layer)
+	context_out := ss.Net.LayerByName("Music Hidden Context").(*leabra.Layer)
+	context_in.UnitVals(&ss.TmpVals1, "Act")
+	context_out.UnitVals(&ss.TmpVals2, "Act")
+	for i,_ := range ss.TmpVals1 {
+		ss.TmpVals1[i] = ss.TmpVals1[i] * ss.FmHid + ss.TmpVals2[i] * ss.FmPrv
+	}
+	context_out.ApplyExt1D32(ss.TmpVals1)
 
 	// **********************************
 
@@ -1292,6 +1304,7 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) 
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
 	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) 
+	musicHidCon := ss.Net.LayerByName("Music Hidden Context").(*leabra.Layer) 
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer)
 	// 	//
@@ -1330,6 +1343,8 @@ func (ss *Sim) ConfigTstTrlLog(dt *etable.Table) {
 		{"HidActP", etensor.FLOAT64, hid.Shp.Shp, nil},
 		{"Hid2ActM", etensor.FLOAT64, hid2.Shp.Shp, nil},
 		{"Hid2ActP", etensor.FLOAT64, hid2.Shp.Shp, nil},
+		{"MusicHidConActM", etensor.FLOAT64, musicHidCon.Shp.Shp, nil},
+		{"MusicHidConActP", etensor.FLOAT64, musicHidCon.Shp.Shp, nil},
 		{"Out2ActM", etensor.FLOAT64, out2.Shp.Shp, nil},
 		{"Out2ActP", etensor.FLOAT64, out2.Shp.Shp, nil},
 		// ****************************************************************************
@@ -1351,6 +1366,7 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 	inp := ss.Net.LayerByName("Letter Input").(*leabra.Layer)
 	inp2 := ss.Net.LayerByName("Music Input").(*leabra.Layer) 
 	hid := ss.Net.LayerByName("Letter Hidden").(*leabra.Layer)
+	musicHidCon := ss.Net.LayerByName("Music Hidden Context").(*leabra.Layer)
 	out := ss.Net.LayerByName("Letter Output").(*leabra.Layer)
 	hid2 := ss.Net.LayerByName("Music Hidden").(*leabra.Layer) 
 	out2 := ss.Net.LayerByName("Music Output").(*leabra.Layer) 
@@ -1391,6 +1407,7 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 		ss.Hidden2ValsTsr = &etensor.Float32{}
 		ss.Output2ValsTsr = &etensor.Float32{}
 		ss.Hidden2ValsTsr = &etensor.Float32{}
+		ss.MusicHiddenContextValsTsr = &etensor.Float32{} // layer data for new layers
 	}
 	inp.UnitValsTensor(ss.InputValsTsr, "Act")
 	dt.SetCellTensor("InAct", row, ss.InputValsTsr)
@@ -1419,6 +1436,10 @@ func (ss *Sim) LogTstTrl(dt *etable.Table) {
 
 	hid2.UnitValsTensor(ss.Hidden2ValsTsr, "ActM") // hidden 2 minus
 	dt.SetCellTensor("Hid2ActM", row, ss.Hidden2ValsTsr)
+
+	// ADDED
+	musicHidCon.UnitValsTensor(ss.MusicHiddenContextValsTsr, "ActM")
+	dt.SetCellTensor("MusicHidConActM", row, ss.MusicHiddenContextValsTsr)
 	// not sure if we should add a plus phase for hidden 2
 	// From here you should go to section 1d, where we set up our plot.
 	// ****************************************************************************
