@@ -74,7 +74,7 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Layer.Inhib.Layer.Gi": "1.4",
 				}},
-			{Sel: ".Hid2ToHid", Desc: "Letter Hidden to Music Hidden", 
+			{Sel: ".Hid2ToHid", Desc: "Music Hidden to Letter Hidden", 
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
@@ -86,20 +86,29 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
+
 			// ADDED EVERYTHING BELOW!
-			{Sel: ".ContextToHid", Desc: "Hidden Context to Letter Hidden", //ADDED
+			{Sel: ".SharedHiddenToHid", Desc: "Shared Hidden to Letter Hidden", //ADDED
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".ContextToHid2", Desc: "Hidden Context to Music Hidden", //ADDED
+			{Sel: ".SharedHiddenToHid2", Desc: "Shared Hidden to Music Hidden", //ADDED
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".HidToContext", Desc: "Letter Hidden to Hidden Context", //ADDED
+			{Sel: ".HidToSharedHidden", Desc: "Letter Hidden to Shared Hidden", //ADDED
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".Hid2ToContext", Desc: "Letter Hidden to Hidden Context", //ADDED
+			{Sel: ".Hid2ToSharedHidden", Desc: "Letter Hidden to Shared Hidden", //ADDED
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".MusicHiddenToMusicHiddenContext", Desc: "Music Hidden to Music Hidden Context", //ADDED
+				Params: params.Params{
+					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
+				}},
+			{Sel: ".MusicHiddenContextToMusicHidden", Desc: "Music Hidden Context to Music Hidden", //ADDED
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
@@ -180,10 +189,14 @@ type Sim struct {
 	Out2ToAssoc float32         `def:"0" desc:"Between Music Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  
 	
 	// ADDED the four floats below
-	ContextToHid  float32         `def:"0" desc:"Between Hidden Context and Letter Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
-	ContextToHid2 float32         `def:"0" desc:"Between Hidden Context and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
-	HidToContext  float32         `def:"0" desc:"Between Letter Hidden and Hidden Context WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
-	Hid2ToContext float32         `def:"0" desc:"Between Music Hidden and Hidden Context WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	SharedHiddenToHid  float32         `def:"0" desc:"Between Shared Hidden and Letter Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	SharedHiddenToHid2 float32         `def:"0" desc:"Between Shared Hidden and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	HidToSharedHidden  float32         `def:"0" desc:"Between Letter Hidden and Shared Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	Hid2ToSharedHidden float32         `def:"0" desc:"Between Music Hidden and Shared Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+
+	// ADDED the two floats below as well
+	MusicHiddenToMusicHiddenContext  float32         `def:"0" desc:"Between Music Hidden and Music Hidden Context WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
+	MusicHiddenContextToMusicHidden float32         `def:"0" desc:"Between Music Hidden Context and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
 
 	Net         *leabra.Network `view:"no-inline" desc:"the network -- click to view / edit parameters for layers, prjns, etc"`
 	//Pats    *etable.Table     `view:"no-inline" desc:"the training patterns to use"`
@@ -304,7 +317,7 @@ func (ss *Sim) New() {
 	ss.TrainUpdt = leabra.AlphaCycle
 	ss.TestUpdt = leabra.Cycle
 	ss.TestInterval = 5
-	ss.LayStatNms = []string{"Letter Input", "Music Input", "Letter Hidden", "Letter Output", "Hidden Context", "Music Hidden", "Music Output", "Associator Layer"} // ADDED Hidden context
+	ss.LayStatNms = []string{"Letter Input", "Music Input", "Letter Hidden", "Letter Output", "Shared Hidden", "Music Hidden", "Music Hidden Context", "Music Output", "Associator Layer"} // ADDED Shared Hidden AND Music Hidden Context
 	ss.HiddenReps.Init()
 	ss.Defaults()
 
@@ -315,10 +328,14 @@ func (ss *Sim) Defaults() {
 	ss.Hid2ToHid = 0
 	ss.Out2ToAssoc = 0
 	ss.AssocToOut = 0
-	ss.ContextToHid = 0
-	ss.ContextToHid2 = 0
-	ss.HidToContext = 0
-	ss.Hid2ToContext = 0
+
+	// ADDED all of this!
+	ss.SharedHiddenToHid = 0
+	ss.SharedHiddenToHid2 = 0
+	ss.HidToSharedHidden = 0
+	ss.Hid2ToSharedHidden = 0
+	ss.MusicHiddenToMusicHiddenContext = 0
+	ss.MusicHiddenContextToMusicHidden = 0
 }
 
 // ****************************************************************************
@@ -422,9 +439,10 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	inp := net.AddLayer2D("Letter Input", 7, 5, emer.Input) // changed to grid
 	inp2 := net.AddLayer2D("Music Input", 1, 5, emer.Input) // changed to grid
 	hid := net.AddLayer2D("Letter Hidden", 6, 5, emer.Hidden)
-	hidcon := net.AddLayer2D("Hidden Context", 6, 5, emer.Hidden) //ADDED hidden context
+	sharedHidden := net.AddLayer2D("Shared Hidden", 6, 5, emer.Hidden) //ADDED Shared Hidden
 	out := net.AddLayer2D("Letter Output", 5, 2, emer.Target)
 	hid2 := net.AddLayer2D("Music Hidden", 6, 5, emer.Hidden)
+	musicHidCon := net.AddLayer2D("Music Hidden Context", 6, 5, emer.Hidden) //ADDED Music Hidden Context
 	out2 := net.AddLayer2D("Music Output", 1, 5, emer.Target)
 	assoc := net.AddLayer2D("Associator Layer", 4, 4, emer.Hidden) 
 	//
@@ -465,8 +483,10 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.BidirConnectLayers(hid, out, prjn.NewFull())
 	net.BidirConnectLayers(hid2, out2, prjn.NewFull())
 
-	net.BidirConnectLayers(hidcon, hid, prjn.NewFull()) // ADDED
-	net.BidirConnectLayers(hidcon, hid2, prjn.NewFull()) // ADDED
+	net.BidirConnectLayers(sharedHidden, hid, prjn.NewFull()) // ADDED
+	net.BidirConnectLayers(sharedHidden, hid2, prjn.NewFull()) // ADDED
+
+	net.BidirConnectLayers(hid2, musicHidCon, prjn.NewFull()) // ADDED
 
 	net.ConnectLayers(hid2, hid, prjn.NewFull(), emer.Forward)
 	net.ConnectLayers(assoc, out, prjn.NewFull(), emer.Forward)  //Music Output to Converging "Associator Layer"
@@ -476,8 +496,9 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 
 	inp2.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Input", YAlign: relpos.Front, Space: 9})
 	hid.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Input", YAlign: relpos.Front, Space: 2})
-	hidcon.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2}) // ADDED
+	sharedHidden.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2}) // ADDED
 	hid2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Input", YAlign: relpos.Front, Space: 2}) // changed position
+	musicHidCon.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Music Hidden", YAlign: relpos.Front, Space: 5}) // ADDED
 	out.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Letter Hidden", YAlign: relpos.Front, Space: 2})
 	out2.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "Music Hidden", YAlign: relpos.Front, Space: 2})
 	assoc.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "Letter Output", YAlign: relpos.Front, Space: 5})
@@ -564,7 +585,10 @@ func (ss *Sim) AlphaCyc(train bool) {
 	// ss.Win.PollEvents() // this can be used instead of running in a separate go routine
 
 	// **********************************
-	// Insert context-layer code snippet from the README here:
+	// ADDED
+
+
+
 	// **********************************
 
 	viewUpdt := ss.TrainUpdt
@@ -918,17 +942,25 @@ func (ss *Sim) ParamsName() string {
 	letAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Out2ToAssoc))
 
 	// ADDED EVERYTHING BELOW!
-	conHid := ss.Params.SetByName("Base").SheetByName("Network").SelByName("ContextToHid")
-	conHid.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.ContextToHid))
+	SharedHiddenHid := ss.Params.SetByName("Base").SheetByName("Network").SelByName("SharedHiddenToHid")
+	SharedHiddenHid.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.SharedHiddenToHid))
 
-	conHidTwo := ss.Params.SetByName("Base").SheetByName("Network").SelByName("ContextToHid2")
-	conHidTwo.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.ContextToHid2))
+	SharedHiddenHidTwo := ss.Params.SetByName("Base").SheetByName("Network").SelByName("SharedHiddenToHid2")
+	SharedHiddenHidTwo.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.SharedHiddenToHid2))
 
-	hidCon := ss.Params.SetByName("Base").SheetByName("Network").SelByName("HidToContext")
-	hidCon.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.HidToContext))
+	hidSharedHidden := ss.Params.SetByName("Base").SheetByName("Network").SelByName("HidToSharedHidden")
+	hidSharedHidden.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.HidToSharedHidden))
 
-	hidTwoCon := ss.Params.SetByName("Base").SheetByName("Network").SelByName("Hid2ToContext")
-	hidTwoCon.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Hid2ToContext))
+	hidTwoSharedHidden := ss.Params.SetByName("Base").SheetByName("Network").SelByName("Hid2ToSharedHidden")
+	hidTwoSharedHidden.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Hid2ToSharedHidden))
+
+	// ADDED THESE BELOW AS WELL!!
+	MusicHiddenToMusicHiddenContext := ss.Params.SetByName("Base").SheetByName("Network").SelByName("MusicHiddenToMusicHiddenContext")
+	MusicHiddenToMusicHiddenContext.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.MusicHiddenToMusicHiddenContext))
+
+	MusicHiddenContextToMusicHidden := ss.Params.SetByName("Base").SheetByName("Network").SelByName("MusicHiddenContextToMusicHidden")
+	MusicHiddenContextToMusicHidden.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.MusicHiddenContextToMusicHidden))
+	
 
 
 	return ss.ParamSet
@@ -962,23 +994,34 @@ func (ss *Sim) SetParams(sheet string, setMsg bool) error {
 
 
 	// ADDED everything below - new bidirectional connections with specific weights!
-	//setting weight scale parameters from Context to Hid
-	ConToHid := letterHid.RcvPrjns.SendName("Hidden Context").(leabra.LeabraPrjn).AsLeabra()
-	ConToHid.WtScale.Rel = ss.ContextToHid 
+	//setting weight scale parameters from SharedHidden to Hid
+	SharedHiddenToHid := letterHid.RcvPrjns.SendName("Shared Hidden").(leabra.LeabraPrjn).AsLeabra()
+	SharedHiddenToHid.WtScale.Rel = ss.SharedHiddenToHid 
 
-	//setting weight scale parameters from Context to Hid2
+	//setting weight scale parameters from SharedHidden to Hid2
 	musicHid :=  ss.Net.LayerByName("Music Hidden").(leabra.LeabraLayer).AsLeabra()
-	ContoHid2 := musicHid.RcvPrjns.SendName("Hidden Context").(leabra.LeabraPrjn).AsLeabra()
-	ContoHid2.WtScale.Rel = ss.ContextToHid2 
+	SharedHiddentoHid2 := musicHid.RcvPrjns.SendName("Shared Hidden").(leabra.LeabraPrjn).AsLeabra()
+	SharedHiddentoHid2.WtScale.Rel = ss.SharedHiddenToHid2 
 
-	//setting weight scale parameters from Hid to Context
-	hiddenCon :=  ss.Net.LayerByName("Hidden Context").(leabra.LeabraLayer).AsLeabra()
-	hidtoCon := hiddenCon.RcvPrjns.SendName("Letter Hidden").(leabra.LeabraPrjn).AsLeabra()
-	hidtoCon.WtScale.Rel = ss.HidToContext 
+	//setting weight scale parameters from Hid to SharedHidden
+	SharedHidden :=  ss.Net.LayerByName("Shared Hidden").(leabra.LeabraLayer).AsLeabra()
+	hidtoSharedHidden := SharedHidden.RcvPrjns.SendName("Letter Hidden").(leabra.LeabraPrjn).AsLeabra()
+	hidtoSharedHidden.WtScale.Rel = ss.HidToSharedHidden
 
-	//setting weight scale parameters from Hid2 to Context
-	hid2toCon := hiddenCon.RcvPrjns.SendName("Music Hidden").(leabra.LeabraPrjn).AsLeabra()
-	hid2toCon.WtScale.Rel = ss.Hid2ToContext 
+	//setting weight scale parameters from Hid2 to SharedHidden
+	hid2toSharedHidden := SharedHidden.RcvPrjns.SendName("Music Hidden").(leabra.LeabraPrjn).AsLeabra()
+	hid2toSharedHidden.WtScale.Rel = ss.Hid2ToSharedHidden 
+
+
+	// ADDED everything below as well! New bidirectional connections between Music Hidden and Music Hidden Context
+	//setting weight scale parameters from Hid2 to Music Hidden Context
+	musicHidCon :=  ss.Net.LayerByName("Music Hidden Context").(leabra.LeabraLayer).AsLeabra()
+	MusicHiddenToMusicHiddenContext := musicHidCon.RcvPrjns.SendName("Music Hidden").(leabra.LeabraPrjn).AsLeabra()
+	MusicHiddenToMusicHiddenContext.WtScale.Rel = ss.MusicHiddenToMusicHiddenContext 
+
+	//setting weight scale parameters from Music Hidden Context to Hid2
+	MusicHiddenContextToMusicHidden := musicHid.RcvPrjns.SendName("Music Hidden Context").(leabra.LeabraPrjn).AsLeabra()
+	MusicHiddenContextToMusicHidden.WtScale.Rel = ss.MusicHiddenContextToMusicHidden
 	
 	return err
 }
