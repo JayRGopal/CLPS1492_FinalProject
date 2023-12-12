@@ -1269,7 +1269,7 @@ func (ss *Sim) ConfigTrnEpcLog(dt *etable.Table) {
 }
 
 func (ss *Sim) ConfigTrnEpcPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D {
-	plt.Params.Title = "Synesthesia Stroop Task Epoch Plot"
+	plt.Params.Title = "Jay & Jeremy's Music Task Epoch Plot"
 	plt.Params.XAxisCol = "Epoch"
 	plt.SetTable(dt)
 	// order of params: on, fixMin, min, fixMax, max
@@ -1485,7 +1485,7 @@ func (ss *Sim) TstTrlBlank(dt *etable.Table) {
 }
 
 func (ss *Sim) ConfigTstTrlPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D {
-	plt.Params.Title = "Synesthesia Stroop Task Test Trial Plot"
+	plt.Params.Title = "Jay & Jeremy's Music Task Test Trial Plot"
 	plt.Params.XAxisCol = "Epoch"
 	plt.SetTable(dt)
 	// order of params: on, fixMin, min, fixMax, max
@@ -1626,7 +1626,7 @@ func (ss *Sim) ConfigTstCycLog(dt *etable.Table) {
 }
 
 func (ss *Sim) ConfigTstCycPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D {
-	plt.Params.Title = "Synesthesia Stroop Task 25 Test Cycle Plot"
+	plt.Params.Title = "Jay & Jeremy's Music Task 25 Test Cycle Plot"
 	plt.Params.XAxisCol = "Cycle"
 	plt.SetTable(dt)
 	// order of params: on, fixMin, min, fixMax, max
@@ -1709,6 +1709,12 @@ func (ss *Sim) LogRun(dt *etable.Table) {
 	dt.SetCellFloat("PctErr", row, agg.Mean(epcix, "PctErr")[0])
 	dt.SetCellFloat("PctCor", row, agg.Mean(epcix, "PctCor")[0])
 	dt.SetCellFloat("CosDiff", row, agg.Mean(epcix, "CosDiff")[0])
+	dt.SetCellFloat("AssocToOut2", row, float64(ss.AssocToOut2))
+	dt.SetCellFloat("OutToAssoc", row, float64(ss.OutToAssoc))
+	dt.SetCellFloat("SharedHiddenToHid", row, float64(ss.SharedHiddenToHid))
+	dt.SetCellFloat("SharedHiddenToHid2", row, float64(ss.SharedHiddenToHid2))
+	dt.SetCellFloat("HidToSharedHidden", row, float64(ss.HidToSharedHidden))
+	dt.SetCellFloat("Hid2ToSharedHidden", row, float64(ss.Hid2ToSharedHidden))
 
 	runix := etable.NewIdxView(dt)
 	spl := split.GroupBy(runix, []string{"Params"})
@@ -1741,11 +1747,17 @@ func (ss *Sim) ConfigRunLog(dt *etable.Table) {
 		{"PctErr", etensor.FLOAT64, nil, nil},
 		{"PctCor", etensor.FLOAT64, nil, nil},
 		{"CosDiff", etensor.FLOAT64, nil, nil},
+		{"AssocToOut2", etensor.FLOAT64, nil, nil},
+		{"OutToAssoc", etensor.FLOAT64, nil, nil},
+		{"SharedHiddenToHid", etensor.FLOAT64, nil, nil},
+		{"SharedHiddenToHid2", etensor.FLOAT64, nil, nil},
+		{"HidToSharedHidden", etensor.FLOAT64, nil, nil},
+		{"Hid2ToSharedHidden", etensor.FLOAT64, nil, nil},
 	}, 0)
 }
 
 func (ss *Sim) ConfigRunPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D {
-	plt.Params.Title = "Synesthesia Stroop Task 25 Run Plot"
+	plt.Params.Title = "Jay & Jeremy's Music Task 25 Run Plot"
 	plt.Params.XAxisCol = "Run"
 	plt.SetTable(dt)
 	// order of params: on, fixMin, min, fixMax, max
@@ -1778,9 +1790,9 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	height := 1200
 
 	gi.SetAppName("synesth")
-	gi.SetAppAbout(`In this project, we explored two computational models of synesthesia using the Stroop Task.`)
+	gi.SetAppAbout(`In this project, we (Jay Gopal [Brown '25] and Jeremy Fleming [Brown '25]) explored two computational models of associative learning using a custom Music Task.`)
 
-	win := gi.NewMainWindow("synesth", "Synesthesia Stroop Task Network", width, height)
+	win := gi.NewMainWindow("synesth", "Jay & Jeremy's Music Task Network", width, height)
 	ss.Win = win
 
 	vp := win.WinViewport2D()
