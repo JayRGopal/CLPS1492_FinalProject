@@ -78,11 +78,11 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".AssocToOut", Desc: "Associator to Music Output", 
+			{Sel: ".AssocToOut2", Desc: "Associator to Music Output", 
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
-			{Sel: ".Out2ToAssoc", Desc: "Letter Output to Associator", 
+			{Sel: ".OutToAssoc", Desc: "Letter Output to Associator", 
 				Params: params.Params{
 					"Prjn.WtScale.Rel": "0", // note: controlled by Sim param
 				}},
@@ -185,8 +185,8 @@ var ParamSets = params.Sets{
 // for the fields which provide hints to how things should be displayed).
 type Sim struct {
 	Hid2ToHid   float32         `def:"0" desc:"Between Letter Hidden and Music Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     
-	AssocToOut  float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"` 
-	Out2ToAssoc float32         `def:"0" desc:"Between Music Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  
+	AssocToOut2  float32         `def:"0" desc:"Between Associator Layer and Music Output WtScale.Rel strength -- increase to 1, 1.5 to test"` 
+	OutToAssoc float32         `def:"0" desc:"Between Letter Output and Associator Layer WtScale.Rel strength -- increase to 1, 1.5 to test"`  
 	
 	// ADDED the four floats below
 	SharedHiddenToHid  float32         `def:"0" desc:"Between Shared Hidden and Letter Hidden WtScale.Rel strength -- increase to 1, 1.5 to test"`     //ADDED
@@ -327,20 +327,20 @@ func (ss *Sim) New() {
 // Defaults sets default params 
 func (ss *Sim) Defaults() {
 	ss.Hid2ToHid = 0
-	ss.Out2ToAssoc = 0
-	ss.AssocToOut = 0
+	ss.OutToAssoc = 0
+	ss.AssocToOut2 = 0
 
 	// ADDED all of this!
 	ss.SharedHiddenToHid = 0
 	ss.SharedHiddenToHid2 = 0
 	ss.HidToSharedHidden = 0
 	ss.Hid2ToSharedHidden = 0
-	ss.MusicHiddenToMusicHiddenContext = 0
-	ss.MusicHiddenContextToMusicHidden = 0
+	ss.MusicHiddenToMusicHiddenContext = 1
+	ss.MusicHiddenContextToMusicHidden = 1
 
 	// ADDED this too!
-	ss.FmHid = 0.4
-	ss.FmPrv = 0.6
+	ss.FmHid = 0.3
+	ss.FmPrv = 0.7
 }
 
 // ****************************************************************************
@@ -494,8 +494,10 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	net.BidirConnectLayers(hid2, musicHidCon, prjn.NewFull()) // ADDED
 
 	net.ConnectLayers(hid2, hid, prjn.NewFull(), emer.Forward)
-	net.ConnectLayers(assoc, out, prjn.NewFull(), emer.Forward)  //Music Output to Converging "Associator Layer"
-	net.ConnectLayers(out2, assoc, prjn.NewFull(), emer.Forward) //Letter Output to Converging "Associator Layer"
+
+	// ADDED - reversed directions of connections here
+	net.ConnectLayers(assoc, out2, prjn.NewFull(), emer.Forward)  //Converging "Associator Layer" to Music Output
+	net.ConnectLayers(out, assoc, prjn.NewFull(), emer.Forward) //Letter Output to Converging "Associator Layer"
 
 	// ADDED - adjusted all positions below to incorporate additional layers, inputs, outputs, and context
 
@@ -947,11 +949,11 @@ func (ss *Sim) ParamsName() string {
 	xact := ss.Params.SetByName("Base").SheetByName("Network").SelByName(".Hid2ToHid")
 	xact.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Hid2ToHid))
 
-	colAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("AssocToOut")
-	colAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.AssocToOut))
+	colAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("AssocToOut2")
+	colAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.AssocToOut2))
 
-	letAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("Out2ToAssoc")
-	letAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.Out2ToAssoc))
+	letAssoc := ss.Params.SetByName("Base").SheetByName("Network").SelByName("OutToAssoc")
+	letAssoc.Params.SetParamByName("Prjn.WtScale.Rel", fmt.Sprintf("%g", ss.OutToAssoc))
 
 	// ADDED EVERYTHING BELOW!
 	SharedHiddenHid := ss.Params.SetByName("Base").SheetByName("Network").SelByName("SharedHiddenToHid")
@@ -991,18 +993,22 @@ func (ss *Sim) SetParams(sheet string, setMsg bool) error {
 	if ss.ParamSet != "" && ss.ParamSet != "Base" {
 		err = ss.SetParamsSet(ss.ParamSet, sheet, setMsg)
 	}
+
+
 	//setting weight scale parameters for hidden layers
 	letterHid :=  ss.Net.LayerByName("Letter Hidden").(leabra.LeabraLayer).AsLeabra()
 	hidTohid := letterHid.RcvPrjns.SendName("Music Hidden").(leabra.LeabraPrjn).AsLeabra()
 	hidTohid.WtScale.Rel = ss.Hid2ToHid
-	//setting weight scale parameters from output 2 to Assoc 
+
+	// ADDED changed all of this code - reversed direction of connections
+	//setting weight scale parameters from output 1 to Assoc 
 	Assoc :=  ss.Net.LayerByName("Associator Layer").(leabra.LeabraLayer).AsLeabra()
-	Out2ToAssoc := Assoc.RcvPrjns.SendName("Music Output").(leabra.LeabraPrjn).AsLeabra()
-	Out2ToAssoc.WtScale.Rel = ss.Out2ToAssoc 
-	//setting weight scale parameters from Assoc to Output 1
-	Out :=  ss.Net.LayerByName("Letter Output").(leabra.LeabraLayer).AsLeabra()
-	AssocToOut := Out.RcvPrjns.SendName("Associator Layer").(leabra.LeabraPrjn).AsLeabra()
-	AssocToOut.WtScale.Rel = ss.AssocToOut 
+	OutToAssoc := Assoc.RcvPrjns.SendName("Letter Output").(leabra.LeabraPrjn).AsLeabra()
+	OutToAssoc.WtScale.Rel = ss.OutToAssoc 
+	//setting weight scale parameters from Assoc to Output 2
+	Out2 :=  ss.Net.LayerByName("Music Output").(leabra.LeabraLayer).AsLeabra()
+	AssocToOut2 := Out2.RcvPrjns.SendName("Associator Layer").(leabra.LeabraPrjn).AsLeabra()
+	AssocToOut2.WtScale.Rel = ss.AssocToOut2 
 
 
 	// ADDED everything below - new bidirectional connections with specific weights!
