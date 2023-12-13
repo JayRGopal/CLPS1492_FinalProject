@@ -5,14 +5,7 @@ import matplotlib.patheffects as PathEffects
 def plot_epoch_vs_pcterr(csv_file, line_color='blue', title_font_size=20, 
                          label_font_size=30, ticks_font_size=15, plot_title='Epoch vs Percent Error'):
     """
-    Plots Percent Error vs Epoch from a CSV file.
-
-    :param csv_file: Path to the CSV file.
-    :param line_color: Color of the plot line.
-    :param title_font_size: Font size of the plot title.
-    :param label_font_size: Font size of the x and y axis labels.
-    :param ticks_font_size: Font size of the x and y axis ticks.
-    :param plot_title: Title of the plot.
+    Plots Percent Error vs Epoch from the CSV file exported from the simulation
     """
     # Load CSV
     data = pd.read_csv(csv_file)
@@ -36,6 +29,6 @@ def plot_epoch_vs_pcterr(csv_file, line_color='blue', title_font_size=20,
     plt.savefig(f'{plot_title}.png')
 
 # Example usage
-plot_epoch_vs_pcterr('topdown_and_latent.csv', line_color='gray', title_font_size=34, 
-                     label_font_size=35, ticks_font_size=25, plot_title='Training Plot for Hybrid Network')
+plot_epoch_vs_pcterr('topdown.csv', line_color='green', title_font_size=34, 
+                     label_font_size=35, ticks_font_size=25, plot_title='Training Plot for Top-Down Network')
 
